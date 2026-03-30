@@ -3,7 +3,7 @@
 -- https://www.phpmyadmin.net/
 --
 -- Хост: 127.0.0.1
--- Время создания: Мар 30 2026 г., 12:41
+-- Время создания: Мар 30 2026 г., 12:52
 -- Версия сервера: 10.4.32-MariaDB
 -- Версия PHP: 8.2.12
 
@@ -20,6 +20,444 @@ SET time_zone = "+00:00";
 --
 -- База данных: `books_db`
 --
+
+DELIMITER $$
+--
+-- Процедуры
+--
+CREATE DEFINER=`root`@`localhost` PROCEDURE `CalculateStat` (IN `table_name` VARCHAR(64), IN `column_name` VARCHAR(64))   BEGIN
+    SET @sql = CONCAT('SELECT 
+                          AVG(', column_name, '), 
+                          SUM(', column_name, '), 
+                          MAX(', column_name, '), 
+                          MIN(', column_name, ') 
+                      INTO @avg_value, @sum_value, @max_value, @min_value 
+                      FROM ', table_name);
+
+    -- Подготовка и выполнение SQL-запроса
+    PREPARE stmt FROM @sql;
+    EXECUTE stmt;
+    DEALLOCATE PREPARE stmt;
+
+    -- Вставляем результаты в таблицу statistics_table
+    INSERT INTO statistics_table (calculation_date, average_value, sum_value, max_value, min_value)
+    VALUES (NOW(), @avg_value, @sum_value, @max_value, @min_value);
+END$$
+
+--
+-- Функции
+--
+CREATE DEFINER=`root`@`localhost` FUNCTION `CountByCondition` () RETURNS INT(11) DETERMINISTIC BEGIN
+    DECLARE result_count INT DEFAULT 0;
+    SELECT COUNT(*) INTO result_count 
+    FROM user 
+    WHERE Reading_Count > 0;
+
+    RETURN result_count;
+END$$
+
+CREATE DEFINER=`root`@`localhost` FUNCTION `CountValue` (`table_name` VARCHAR(255), `column_name` VARCHAR(255), `cond` VARCHAR(255)) RETURNS INT(11) DETERMINISTIC BEGIN
+    DECLARE value_count INT;
+    SET value_count = (
+        SELECT
+            COUNT(*)
+        FROM
+            table_name
+        WHERE
+            column_name = cond
+    );
+    
+    RETURN value_count;
+END$$
+
+CREATE DEFINER=`root`@`localhost` FUNCTION `CountValues` (`table_name` VARCHAR(255), `column_name` VARCHAR(255), `cond` VARCHAR(255)) RETURNS INT(11) DETERMINISTIC BEGIN
+    -- Подсчет количества значений, удовлетворяющих условию
+    DECLARE value_count INT;
+    SET value_count = (
+        SELECT
+            COUNT(*)
+        FROM
+            table_name
+        WHERE
+            column_name = cond
+    );
+    
+    -- Возврат количества значений
+    RETURN value_count;
+END$$
+
+DELIMITER ;
+
+-- --------------------------------------------------------
+
+--
+-- Структура таблицы `age_rating`
+--
+
+CREATE TABLE `age_rating` (
+  `Age_Rating_Code` int(11) NOT NULL,
+  `Age_Rating` varchar(50) NOT NULL
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
+
+--
+-- Дамп данных таблицы `age_rating`
+--
+
+INSERT INTO `age_rating` (`Age_Rating_Code`, `Age_Rating`) VALUES
+(1, 'G'),
+(2, 'PG-13'),
+(3, 'R'),
+(4, 'NC-17'),
+(5, 'NC-21'),
+(6, 'G'),
+(7, 'PG-13'),
+(8, 'R'),
+(9, 'NC-17'),
+(10, 'NC-21'),
+(11, 'G'),
+(12, 'PG-13'),
+(13, 'R'),
+(14, 'NC-17'),
+(15, 'NC-21');
+
+-- --------------------------------------------------------
+
+--
+-- Структура таблицы `authors`
+--
+
+CREATE TABLE `authors` (
+  `Author_Code` int(11) NOT NULL,
+  `Author` varchar(100) NOT NULL
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
+
+--
+-- Дамп данных таблицы `authors`
+--
+
+INSERT INTO `authors` (`Author_Code`, `Author`) VALUES
+(1, 'А.С. Пушкин'),
+(2, 'С. Дж. Маас'),
+(3, 'Дж. К. Роулинг'),
+(4, 'Л. Н. Толстой'),
+(5, 'Н. Скавич'),
+(6, 'А.С. Пушкин'),
+(7, 'С. Дж. Маас'),
+(8, 'Дж. К. Роулинг'),
+(9, 'Л. Н. Толстой'),
+(10, 'Н. Скавич'),
+(11, 'А.С. Пушкин'),
+(12, 'С. Дж. Маас'),
+(13, 'Дж. К. Роулинг'),
+(14, 'Л. Н. Толстой'),
+(15, 'Н. Скавич');
+
+-- --------------------------------------------------------
+
+--
+-- Структура таблицы `books`
+--
+
+CREATE TABLE `books` (
+  `Book_Code` int(11) NOT NULL,
+  `Author_Code` int(11) DEFAULT NULL,
+  `Title_Code` int(11) DEFAULT NULL,
+  `Publisher_Code` int(11) DEFAULT NULL,
+  `Publication_Year` year(4) DEFAULT NULL,
+  `Page_Count` int(11) DEFAULT NULL,
+  `Age_Rating_Code` int(11) DEFAULT NULL,
+  `Source` varchar(255) DEFAULT NULL,
+  `Genre_Code` int(11) DEFAULT NULL,
+  `Tag_Code` int(11) DEFAULT NULL,
+  `Format_Code` int(11) DEFAULT NULL
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
+
+--
+-- Дамп данных таблицы `books`
+--
+
+INSERT INTO `books` (`Book_Code`, `Author_Code`, `Title_Code`, `Publisher_Code`, `Publication_Year`, `Page_Count`, `Age_Rating_Code`, `Source`, `Genre_Code`, `Tag_Code`, `Format_Code`) VALUES
+(1, 1, 1, 4, '2010', 232, 2, 'источник', 1, 1, 3),
+(2, 2, 2, 3, '2012', 678, 5, 'источник', 3, 2, 2),
+(3, 3, 3, 1, '2002', 677, 1, 'источник', 4, 2, 2),
+(4, 4, 4, 4, '2005', 887, 3, 'источник', 1, 4, 2),
+(5, 5, 5, 4, '2016', 543, 4, 'источник', 3, 2, 3),
+(6, 1, 1, 4, '2010', 232, 2, 'источник', 1, 1, 3),
+(7, 2, 2, 3, '2012', 678, 5, 'источник', 3, 2, 2),
+(8, 3, 3, 1, '2002', 677, 1, 'источник', 4, 2, 2),
+(9, 4, 4, 4, '2005', 887, 3, 'источник', 1, 4, 2),
+(10, 5, 5, 4, '2016', 543, 4, 'источник', 3, 2, 3);
+
+-- --------------------------------------------------------
+
+--
+-- Структура таблицы `format_code`
+--
+
+CREATE TABLE `format_code` (
+  `Format_Code` int(11) NOT NULL,
+  `Format` varchar(100) NOT NULL
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
+
+--
+-- Дамп данных таблицы `format_code`
+--
+
+INSERT INTO `format_code` (`Format_Code`, `Format`) VALUES
+(1, 'Цикл'),
+(2, 'Серия'),
+(3, 'Одиночная книга'),
+(4, 'Цикл'),
+(5, 'Серия'),
+(6, 'Одиночная книга'),
+(7, 'Цикл'),
+(8, 'Серия'),
+(9, 'Одиночная книга');
+
+-- --------------------------------------------------------
+
+--
+-- Структура таблицы `genre_code`
+--
+
+CREATE TABLE `genre_code` (
+  `Genre_Code` int(11) NOT NULL,
+  `Genre` varchar(100) NOT NULL,
+  `Genre_Description` text DEFAULT NULL
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
+
+--
+-- Дамп данных таблицы `genre_code`
+--
+
+INSERT INTO `genre_code` (`Genre_Code`, `Genre`, `Genre_Description`) VALUES
+(1, 'Фантастика', 'Жанр, который включает в себя элементы, основанные на научных или воображаемых концепциях.'),
+(2, 'Драма', 'Жанр, фокусирующийся на эмоциональных и жизненных конфликтах персонажей.'),
+(3, 'Комедия', 'Жанр, предназначенный для развлечения и создания смеха.'),
+(4, 'Ужасы', 'Жанр, нацеленный на создание чувства страха и тревоги.'),
+(5, 'Приключения', 'Жанр, в котором персонажи сталкиваются с захватывающими и рискованными ситуациями.');
+
+-- --------------------------------------------------------
+
+--
+-- Дублирующая структура для представления `mostpopularbooks`
+-- (См. Ниже фактическое представление)
+--
+CREATE TABLE `mostpopularbooks` (
+`Title_Code` int(11)
+,`Reading_Count` bigint(21)
+);
+
+-- --------------------------------------------------------
+
+--
+-- Структура таблицы `publishers`
+--
+
+CREATE TABLE `publishers` (
+  `Publisher_Code` int(11) NOT NULL,
+  `Publisher` varchar(100) NOT NULL
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
+
+--
+-- Дамп данных таблицы `publishers`
+--
+
+INSERT INTO `publishers` (`Publisher_Code`, `Publisher`) VALUES
+(1, 'Махаон'),
+(2, 'ACT'),
+(3, 'Попкорн book'),
+(4, 'Просвещение'),
+(5, 'Эксмо'),
+(6, 'Махаон'),
+(7, 'ACT'),
+(8, 'Попкорн book'),
+(9, 'Просвещение'),
+(10, 'Эксмо'),
+(11, 'Махаон'),
+(12, 'ACT'),
+(13, 'Попкорн book'),
+(14, 'Просвещение'),
+(15, 'Эксмо');
+
+-- --------------------------------------------------------
+
+--
+-- Структура таблицы `reading`
+--
+
+CREATE TABLE `reading` (
+  `Reading_Code` int(11) NOT NULL,
+  `User_Code` int(11) DEFAULT NULL,
+  `Book_Code` int(11) DEFAULT NULL,
+  `Reading_Start` date DEFAULT NULL,
+  `Reading_End` date DEFAULT NULL,
+  `Originality` int(11) DEFAULT NULL,
+  `Characters` int(11) DEFAULT NULL,
+  `World_Building` int(11) DEFAULT NULL,
+  `Humor` int(11) DEFAULT NULL,
+  `Meaning` int(11) DEFAULT NULL,
+  `Plot` text DEFAULT NULL,
+  `Quotes` text DEFAULT NULL
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
+
+--
+-- Дамп данных таблицы `reading`
+--
+
+INSERT INTO `reading` (`Reading_Code`, `User_Code`, `Book_Code`, `Reading_Start`, `Reading_End`, `Originality`, `Characters`, `World_Building`, `Humor`, `Meaning`, `Plot`, `Quotes`) VALUES
+(1, 1, 1, '2023-01-10', '2023-01-20', 4, 4, 4, 3, 4, 'Захватывающий', '«Каждый выбор имеет последствия»'),
+(3, 3, 3, '2023-03-01', '2023-03-10', 3, 4, 5, 5, 4, 'Увлекательный', '«Мы сами создаем свои судьбы»'),
+(4, 4, 4, '2023-04-12', '2023-04-20', 4, 3, 4, 4, 3, 'Динамичный', '«Время лечит все раны»'),
+(5, 5, 5, '2023-05-01', '2023-05-10', 5, 5, 5, 3, 5, 'Трогательный', '«Истина всегда рядом»'),
+(6, 2, 1, '2023-01-10', '2023-01-20', 4, 4, 4, 3, 4, 'Захватывающий', '«Каждый выбор имеет последствия»'),
+(7, 1, 2, '2023-02-05', '2023-02-15', 4, 5, 4, 2, 5, 'Интригующий', '«Любовь – это не просто слово»'),
+(8, 2, 3, '2023-03-01', '2023-03-10', 3, 4, 5, 5, 4, 'Увлекательный', '«Мы сами создаем свои судьбы»'),
+(9, 1, 4, '2023-04-12', '2023-04-20', 4, 3, 4, 4, 3, 'Динамичный', '«Время лечит все раны»'),
+(10, 3, 5, '2023-05-01', '2023-05-10', 5, 5, 5, 3, 5, 'Трогательный', '«Истина всегда рядом»'),
+(11, 3, 1, '2023-01-10', '2023-01-20', 4, 4, 4, 3, 4, 'Захватывающий', '«Каждый выбор имеет последствия»'),
+(12, 1, 2, '2023-02-05', '2023-02-15', 4, 5, 4, 2, 5, 'Интригующий', '«Любовь – это не просто слово»'),
+(13, 3, 3, '2023-03-01', '2023-03-10', 3, 4, 5, 5, 4, 'Увлекательный', '«Мы сами создаем свои судьбы»'),
+(14, 1, 4, '2023-04-12', '2023-04-20', 4, 3, 4, 4, 3, 'Динамичный', '«Время лечит все раны»'),
+(15, 1, 5, '2023-05-01', '2023-05-10', 5, 5, 5, 3, 5, 'Трогательный', '«Истина всегда рядом»');
+
+--
+-- Триггеры `reading`
+--
+DELIMITER $$
+CREATE TRIGGER `after_reading_delete` AFTER DELETE ON `reading` FOR EACH ROW BEGIN
+    UPDATE User
+    SET Reading_Count = Reading_Count - 1
+    WHERE User_Code = OLD.User_Code;
+END
+$$
+DELIMITER ;
+DELIMITER $$
+CREATE TRIGGER `after_reading_insert` AFTER INSERT ON `reading` FOR EACH ROW BEGIN
+    UPDATE User
+    SET Reading_Count = Reading_Count + 1
+    WHERE User_Code = NEW.User_Code;
+END
+$$
+DELIMITER ;
+
+-- --------------------------------------------------------
+
+--
+-- Структура таблицы `statistics_table`
+--
+
+CREATE TABLE `statistics_table` (
+  `stat_code` int(11) NOT NULL,
+  `calculation_date` date DEFAULT NULL,
+  `average_value` float DEFAULT NULL,
+  `sum_value` float DEFAULT NULL,
+  `max_value` float DEFAULT NULL,
+  `min_value` float DEFAULT NULL
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
+
+--
+-- Дамп данных таблицы `statistics_table`
+--
+
+INSERT INTO `statistics_table` (`stat_code`, `calculation_date`, `average_value`, `sum_value`, `max_value`, `min_value`) VALUES
+(1, '2024-12-08', 0.9, 9, 3, 0);
+
+-- --------------------------------------------------------
+
+--
+-- Структура таблицы `tag_code`
+--
+
+CREATE TABLE `tag_code` (
+  `Tag_Code` int(11) NOT NULL,
+  `Tag` varchar(100) NOT NULL,
+  `Tag_Description` text DEFAULT NULL
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
+
+--
+-- Дамп данных таблицы `tag_code`
+--
+
+INSERT INTO `tag_code` (`Tag_Code`, `Tag`, `Tag_Description`) VALUES
+(1, 'Вампиры', 'В книге описан мир с человекоподобными созданиями, питающимися человеческой кровью'),
+(2, 'Магия', 'В произведении есть элементы, связанные с наделением персонажей или объектов силами, которые естественным образом не встречаются в реальном мире'),
+(3, 'Исторические эпохи', 'В книге описаны события, происходящие в прошлом'),
+(4, 'Монстры', 'В книге описан мир с мистическими, сверхъестественными существами'),
+(5, 'Мафия', 'В книге присутствуют элементы с преступными группировками'),
+(6, 'Вампиры', 'В книге описан мир с человекоподобными созданиями, питающимися человеческой кровью'),
+(7, 'Магия', 'В произведении есть элементы, связанные с наделением персонажей или объектов силами, которые естественным образом не встречаются в реальном мире'),
+(8, 'Исторические эпохи', 'В книге описаны события, происходящие в прошлом'),
+(9, 'Монстры', 'В книге описан мир с мистическими, сверхъестественными существами'),
+(10, 'Мафия', 'В книге присутствуют элементы с преступными группировками'),
+(11, 'Вампиры', 'В книге описан мир с человекоподобными созданиями, питающимися человеческой кровью'),
+(12, 'Магия', 'В произведении есть элементы, связанные с наделением персонажей или объектов силами, которые естественным образом не встречаются в реальном мире'),
+(13, 'Исторические эпохи', 'В книге описаны события, происходящие в прошлом'),
+(14, 'Монстры', 'В книге описан мир с мистическими, сверхъестественными существами'),
+(15, 'Мафия', 'В книге присутствуют элементы с преступными группировками');
+
+-- --------------------------------------------------------
+
+--
+-- Структура таблицы `titles`
+--
+
+CREATE TABLE `titles` (
+  `Title_Code` int(11) NOT NULL,
+  `Title` varchar(255) NOT NULL
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
+
+--
+-- Дамп данных таблицы `titles`
+--
+
+INSERT INTO `titles` (`Title_Code`, `Title`) VALUES
+(1, 'Капитанская дочка'),
+(2, 'Стеклянный трон'),
+(3, 'Гарри Поттер и философский камень'),
+(4, 'Война и мир'),
+(5, 'Все ради игры'),
+(6, 'Капитанская дочка'),
+(7, 'Стеклянный трон'),
+(8, 'Гарри Поттер и философский камень'),
+(9, 'Война и мир'),
+(10, 'Все ради игры'),
+(11, 'Капитанская дочка'),
+(12, 'Стеклянный трон'),
+(13, 'Гарри Поттер и философский камень'),
+(14, 'Война и мир'),
+(15, 'Все ради игры');
+
+-- --------------------------------------------------------
+
+--
+-- Структура таблицы `user`
+--
+
+CREATE TABLE `user` (
+  `User_Code` int(11) NOT NULL,
+  `Username` char(50) DEFAULT NULL,
+  `Login` char(50) DEFAULT NULL,
+  `Password` char(50) DEFAULT NULL,
+  `Additional_Information` text DEFAULT NULL,
+  `Reading_Count` int(11) DEFAULT 0
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
+
+--
+-- Дамп данных таблицы `user`
+--
+
+INSERT INTO `user` (`User_Code`, `Username`, `Login`, `Password`, `Additional_Information`, `Reading_Count`) VALUES
+(1, 'Иван Иванов', 'Человечек', 'password123', 'Пользователь из Москвы', 6),
+(2, 'Анна Петрова', 'petrova', 'mypassword', 'Любит путешествовать', 2),
+(3, 'Сергей Смирнов', 'smirnov', 'securepass456', 'Фанат футбола', 4),
+(4, 'Елена Кузнецова', 'kuznetsova', 'elena789', 'Работает в IT', 1),
+(5, 'Дмитрий Сидоров', 'sidorov', 'dmitry321', 'Увлекается чтением', 1),
+(6, 'Иван Иванов', 'Человечек', 'password123', 'Пользователь из Москвы', 0),
+(7, 'Анна Петрова', 'petrova', 'mypassword', 'Любит путешествовать', 0),
+(8, 'Сергей Смирнов', 'smirnov', 'securepass456', 'Фанат футбола', 0),
+(9, 'Елена Кузнецова', 'kuznetsova', 'elena789', 'Работает в IT', 0),
+(10, 'Дмитрий Сидоров', 'sidorov', 'dmitry321', 'Увлекается чтением', 0);
 
 -- --------------------------------------------------------
 
@@ -2547,9 +2985,93 @@ CREATE TABLE `wp_users` (
 INSERT INTO `wp_users` (`ID`, `user_login`, `user_pass`, `user_nicename`, `user_email`, `user_url`, `user_registered`, `user_activation_key`, `user_status`, `display_name`) VALUES
 (1, 'root', '$wp$2y$10$j2AbI1VLJitX4XiqAaXcUuEb9g8YgveYNwdGwi2CzD8Om/vhia2j.', 'root', 'Kalmar2021@bk.ru', 'http://localhost/wordpress', '2026-02-02 10:59:43', '', 0, 'root');
 
+-- --------------------------------------------------------
+
+--
+-- Структура для представления `mostpopularbooks`
+--
+DROP TABLE IF EXISTS `mostpopularbooks`;
+
+CREATE ALGORITHM=UNDEFINED DEFINER=`root`@`localhost` SQL SECURITY DEFINER VIEW `mostpopularbooks`  AS SELECT `books`.`Title_Code` AS `Title_Code`, count(`reading`.`Reading_Code`) AS `Reading_Count` FROM (`books` join `reading` on(`books`.`Book_Code` = `reading`.`Book_Code`)) GROUP BY `books`.`Title_Code` ORDER BY count(`reading`.`Reading_Code`) DESC ;
+
 --
 -- Индексы сохранённых таблиц
 --
+
+--
+-- Индексы таблицы `age_rating`
+--
+ALTER TABLE `age_rating`
+  ADD PRIMARY KEY (`Age_Rating_Code`);
+
+--
+-- Индексы таблицы `authors`
+--
+ALTER TABLE `authors`
+  ADD PRIMARY KEY (`Author_Code`);
+
+--
+-- Индексы таблицы `books`
+--
+ALTER TABLE `books`
+  ADD PRIMARY KEY (`Book_Code`),
+  ADD KEY `fk3` (`Author_Code`),
+  ADD KEY `fk4` (`Title_Code`),
+  ADD KEY `fk5` (`Publisher_Code`),
+  ADD KEY `fk6` (`Age_Rating_Code`),
+  ADD KEY `fk7` (`Genre_Code`),
+  ADD KEY `fk8` (`Tag_Code`),
+  ADD KEY `fk9` (`Format_Code`);
+
+--
+-- Индексы таблицы `format_code`
+--
+ALTER TABLE `format_code`
+  ADD PRIMARY KEY (`Format_Code`);
+
+--
+-- Индексы таблицы `genre_code`
+--
+ALTER TABLE `genre_code`
+  ADD PRIMARY KEY (`Genre_Code`);
+
+--
+-- Индексы таблицы `publishers`
+--
+ALTER TABLE `publishers`
+  ADD PRIMARY KEY (`Publisher_Code`);
+
+--
+-- Индексы таблицы `reading`
+--
+ALTER TABLE `reading`
+  ADD PRIMARY KEY (`Reading_Code`),
+  ADD KEY `fk1` (`User_Code`),
+  ADD KEY `fk2` (`Book_Code`);
+
+--
+-- Индексы таблицы `statistics_table`
+--
+ALTER TABLE `statistics_table`
+  ADD PRIMARY KEY (`stat_code`);
+
+--
+-- Индексы таблицы `tag_code`
+--
+ALTER TABLE `tag_code`
+  ADD PRIMARY KEY (`Tag_Code`);
+
+--
+-- Индексы таблицы `titles`
+--
+ALTER TABLE `titles`
+  ADD PRIMARY KEY (`Title_Code`);
+
+--
+-- Индексы таблицы `user`
+--
+ALTER TABLE `user`
+  ADD PRIMARY KEY (`User_Code`);
 
 --
 -- Индексы таблицы `wp_commentmeta`
@@ -2664,6 +3186,66 @@ ALTER TABLE `wp_users`
 --
 
 --
+-- AUTO_INCREMENT для таблицы `age_rating`
+--
+ALTER TABLE `age_rating`
+  MODIFY `Age_Rating_Code` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=16;
+
+--
+-- AUTO_INCREMENT для таблицы `authors`
+--
+ALTER TABLE `authors`
+  MODIFY `Author_Code` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=16;
+
+--
+-- AUTO_INCREMENT для таблицы `books`
+--
+ALTER TABLE `books`
+  MODIFY `Book_Code` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=11;
+
+--
+-- AUTO_INCREMENT для таблицы `format_code`
+--
+ALTER TABLE `format_code`
+  MODIFY `Format_Code` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=10;
+
+--
+-- AUTO_INCREMENT для таблицы `genre_code`
+--
+ALTER TABLE `genre_code`
+  MODIFY `Genre_Code` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=16;
+
+--
+-- AUTO_INCREMENT для таблицы `publishers`
+--
+ALTER TABLE `publishers`
+  MODIFY `Publisher_Code` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=16;
+
+--
+-- AUTO_INCREMENT для таблицы `reading`
+--
+ALTER TABLE `reading`
+  MODIFY `Reading_Code` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=16;
+
+--
+-- AUTO_INCREMENT для таблицы `statistics_table`
+--
+ALTER TABLE `statistics_table`
+  MODIFY `stat_code` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=2;
+
+--
+-- AUTO_INCREMENT для таблицы `tag_code`
+--
+ALTER TABLE `tag_code`
+  MODIFY `Tag_Code` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=16;
+
+--
+-- AUTO_INCREMENT для таблицы `titles`
+--
+ALTER TABLE `titles`
+  MODIFY `Title_Code` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=16;
+
+--
 -- AUTO_INCREMENT для таблицы `wp_commentmeta`
 --
 ALTER TABLE `wp_commentmeta`
@@ -2734,6 +3316,29 @@ ALTER TABLE `wp_usermeta`
 --
 ALTER TABLE `wp_users`
   MODIFY `ID` bigint(20) UNSIGNED NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=2;
+
+--
+-- Ограничения внешнего ключа сохраненных таблиц
+--
+
+--
+-- Ограничения внешнего ключа таблицы `books`
+--
+ALTER TABLE `books`
+  ADD CONSTRAINT `fk3` FOREIGN KEY (`Author_Code`) REFERENCES `authors` (`Author_Code`),
+  ADD CONSTRAINT `fk4` FOREIGN KEY (`Title_Code`) REFERENCES `titles` (`Title_Code`),
+  ADD CONSTRAINT `fk5` FOREIGN KEY (`Publisher_Code`) REFERENCES `publishers` (`Publisher_Code`),
+  ADD CONSTRAINT `fk6` FOREIGN KEY (`Age_Rating_Code`) REFERENCES `age_rating` (`Age_Rating_Code`),
+  ADD CONSTRAINT `fk7` FOREIGN KEY (`Genre_Code`) REFERENCES `genre_code` (`Genre_Code`),
+  ADD CONSTRAINT `fk8` FOREIGN KEY (`Tag_Code`) REFERENCES `tag_code` (`Tag_Code`),
+  ADD CONSTRAINT `fk9` FOREIGN KEY (`Format_Code`) REFERENCES `format_code` (`Format_Code`);
+
+--
+-- Ограничения внешнего ключа таблицы `reading`
+--
+ALTER TABLE `reading`
+  ADD CONSTRAINT `fk1` FOREIGN KEY (`User_Code`) REFERENCES `user` (`User_Code`),
+  ADD CONSTRAINT `fk2` FOREIGN KEY (`Book_Code`) REFERENCES `books` (`Book_Code`);
 COMMIT;
 
 /*!40101 SET CHARACTER_SET_CLIENT=@OLD_CHARACTER_SET_CLIENT */;
